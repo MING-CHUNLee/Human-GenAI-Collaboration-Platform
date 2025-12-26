@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add mock mode support and remove PROLIFIC_PID requirement\n\n## Frontend Changes \\(Dashboard.vue\\)\n- Remove PROLIFIC_PID validation to allow local testing without URL parameters\n- Fix infinite reload loop when API calls fail\n- Add default task fallback when /random-task API fails\n- Improve readStorage\\(\\) error handling with try-catch for corrupted localStorage\n- Add null safety check for localData[''task''] before accessing properties\n\n## Backend Changes \\(RandomQueue.rb\\)\n- Add Mock Mode support to run without AWS SQS credentials\n- Implement in-memory queue using @mock_tasks array for development\n- Add automatic fallback to Mock Mode when AWS connection fails\n- Add comprehensive error handling for all SQS operations\n- Implement mock methods: mock_random_task, mock_fill_task, mock_finish_task, etc.\n- Add informative console messages \\(⚠️ warnings, ✅ success, 🔄 fallback\\)\n\n## Backend Changes \\(app.rb\\)\n- Add error handling for RandomQueue operations\n- Wrap all queue operations in try-catch blocks\n- Return proper error responses with status codes\n- Add graceful degradation when queue operations fail\n\n## Benefits\n- Can run application locally without AWS SQS setup\n- More resilient error handling prevents crashes\n- Better developer experience for testing and development\n- Frontend works independently even when backend is unavailable\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}
