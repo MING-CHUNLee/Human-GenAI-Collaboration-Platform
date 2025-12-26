@@ -479,32 +479,50 @@ export default {
     //   }
     // });
 
-    const readStorage=async()=> {
+    const readStorage=() => {
       user_id.value = route.query[Constants.URL_USER_PARAMS] || 'anonymous';
-      if(user_id.value === 'anonymous'){
-        router.push({ path: '/missing' })
-      }
-      updateSharedVariable({'user_id': user_id.value});
-      localData['user_id'] = user_id.value
-      if (!localStorage.getItem(user_id.value)) {
+      // Commented out redirect to allow local testing without PROLIFIC_PID
+      // if (user_id.value === 'anonymous') {
+      //   router.push({ path: '/missing' });
+      // }
+      updateSharedVariable({ 'user_id': user_id.value });
+      localData['user_id'] = user_id.value;
+
+      const raw = localStorage.getItem(user_id.value);
+      if (!raw) {
+        // initialize storage for this user
         localStorage.setItem(user_id.value, JSON.stringify(localData));
-      } else {
-        const data = await localStorage.getItem(user_id.value);
-        localData = JSON.parse(data);
-        textArea.value = localData['storage_notes']||'';
-        wordEditingCount.value = localData['wordEditingCount']||0;
-        wordDeletingCount.value = localData['wordDeletingCount']||0;
-        characterRevisionCount.value = localData['characterRevisionCount']||0;
-        if(textArea.value){
-          previousCharacterCount = textArea.value.length;
-          textAreaWordCount.value = textArea.value.trim().split(/\s+|\n+/).length;
-        }
-        missionTimeStamp.value=localData['missionTimeStamp']||new Date().getTime();
-        if(localData['tour']===false){
-          open.value = localData['tour'];
-          attendTour.value = !localData['tour'];
-          timeId = setInterval(setTimer, TIME_GAP*1000);
-        }
+        return;
+      }
+
+      let parsed = {};
+      try {
+        parsed = JSON.parse(raw) || {};
+      } catch {
+        // reset corrupted storage
+        localStorage.setItem(user_id.value, JSON.stringify(localData));
+        parsed = {};
+      }
+
+      localData = parsed;
+
+      textArea.value = localData['storage_notes'] || '';
+      wordEditingCount.value = localData['wordEditingCount'] || 0;
+      wordDeletingCount.value = localData['wordDeletingCount'] || 0;
+      characterRevisionCount.value = localData['characterRevisionCount'] || 0;
+
+      if (textArea.value !== undefined && textArea.value !== null) {
+        previousCharacterCount = textArea.value.length;
+        const trimmed = textArea.value.trim();
+        textAreaWordCount.value = trimmed ? trimmed.split(/\s+|\n+/).length : 0;
+      }
+
+      missionTimeStamp.value = localData['missionTimeStamp'] || new Date().getTime();
+
+      if (localData['tour'] === false) {
+        open.value = localData['tour'];
+        attendTour.value = !localData['tour'];
+        timeId = setInterval(setTimer, TIME_GAP * 1000);
       }
     };
 
@@ -760,11 +778,18 @@ export default {
         localStorage.setItem(user_id.value, JSON.stringify(localData))
       } catch (error) {
         console.error('Failed to fetch task:', error);
-        location.reload();
         sendError({error_message:"Failed to fetch task:"+ error});
+        // Use a default task to prevent infinite reload
+        localData['task'] = {
+          task_name: 'CREATIVE',
+          message_id: 'default',
+          receipt_handle: 'default',
+          expire_time: new Date().getTime() + MISSION_EXPIRE_TIME*1000
+        };
+        localStorage.setItem(user_id.value, JSON.stringify(localData));
       }
     }
-    if(localData['task'].task_name==='CREATIVE'){
+    if(localData['task'] && localData['task'].task_name==='CREATIVE'){
         scenarioText.value = Constants.CREATIVE;
       }
     else{

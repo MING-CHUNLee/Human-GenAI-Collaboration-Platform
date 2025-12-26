@@ -61,7 +61,11 @@ module RubyOpenAI
                       word_deleted_count: data['word_deleted_count'],
                       word_editing_count: data['word_editing_count'],
                       character_revision_count: data['character_revision_count'])
-          RandomQueue.new(Api.config).finish_task(task)
+          begin
+            RandomQueue.new(Api.config).finish_task(task)
+          rescue StandardError => e
+            puts "⚠️  Error finishing task: #{e.message}"
+          end
           return task.attributes.to_json
         end
         response.status = 201
@@ -316,16 +320,27 @@ module RubyOpenAI
         response['Content-Type'] = 'application/json'
         response.status = 200
         # print('test:', Api.config)
-        RandomQueue.new(Api.config).queue_attributes.to_json
+        begin
+          RandomQueue.new(Api.config).queue_attributes.to_json
+        rescue StandardError => e
+          { error: "Queue unavailable: #{e.message}", mock_mode: true }.to_json
+        end
       end
 
       r.get 'reset-queue' do
         num_of_task = r.params['num'].to_i || 400
-        queue = RandomQueue.new(Api.config)
-        queue.clear_queue
-        response['Content-Type'] = 'application/json'
-        response.status = 200
-        queue.fill_task(num_of_task).to_json
+        begin
+          queue = RandomQueue.new(Api.config)
+          queue.clear_queue
+          queue.fill_task(num_of_task)
+          response['Content-Type'] = 'application/json'
+          response.status = 200
+          { success: true, message: "Queue reset with #{num_of_task} tasks" }.to_json
+        rescue StandardError => e
+          response['Content-Type'] = 'application/json'
+          response.status = 500
+          { error: "Failed to reset queue: #{e.message}" }.to_json
+        end
       end
 
       r.post 'reset-queue-imbalance' do
@@ -339,19 +354,32 @@ module RubyOpenAI
           { success: false, message: 'Invalid type given' }.to_json
           break
         end
-        queue = RandomQueue.new(Api.config)
-        queue.clear_queue
-        response['Content-Type'] = 'application/json'
-        response.status = 200
-        queue.fill_task_imbalance(data).to_json
+        begin
+          queue = RandomQueue.new(Api.config)
+          queue.clear_queue
+          queue.fill_task_imbalance(data)
+          response['Content-Type'] = 'application/json'
+          response.status = 200
+          { success: true, message: 'Queue reset with imbalanced tasks' }.to_json
+        rescue StandardError => e
+          response['Content-Type'] = 'application/json'
+          response.status = 500
+          { error: "Failed to reset imbalanced queue: #{e.message}" }.to_json
+        end
       end
 
       r.get 'clear-queue' do
-        queue = RandomQueue.new(Api.config)
-        queue.clear_queue
-        response['Content-Type'] = 'application/json'
-        response.status = 200
-        { success: true, message: 'Queue cleared' }.to_json
+        begin
+          queue = RandomQueue.new(Api.config)
+          queue.clear_queue
+          response['Content-Type'] = 'application/json'
+          response.status = 200
+          { success: true, message: 'Queue cleared' }.to_json
+        rescue StandardError => e
+          response['Content-Type'] = 'application/json'
+          response.status = 500
+          { error: "Failed to clear queue: #{e.message}" }.to_json
+        end
       end
 
       r.get 'random-task' do
@@ -370,15 +398,24 @@ module RubyOpenAI
 
         # task = Task.create(task_name: CREATVIE_TASK, chat_id: new_chat.id)
 
-        queue = RandomQueue.new(Api.config)
-        # task_body = queue.random_task
-        queue.random_task
-        # { message_id: task_body.message_id, receipt_handle: task_body.receipt_handle,
-        #   task_name: JSON.parse(task_body.body)['task'] }.to_json
-        # task_name = JSON.parse(task_body.body)['task']
-        # task_name.to_json
-        # Task.create(task_name:, chat_id: new_chat.id, message_id: task_body.message_id,
-        #             receipt_handle: task_body.receipt_handle).attributes.to_json
+        begin
+          queue = RandomQueue.new(Api.config)
+          # task_body = queue.random_task
+          queue.random_task
+          # { message_id: task_body.message_id, receipt_handle: task_body.receipt_handle,
+          #   task_name: JSON.parse(task_body.body)['task'] }.to_json
+          # task_name = JSON.parse(task_body.body)['task']
+          # task_name.to_json
+          # Task.create(task_name:, chat_id: new_chat.id, message_id: task_body.message_id,
+          #             receipt_handle: task_body.receipt_handle).attributes.to_json
+        rescue StandardError => e
+          puts "⚠️  Error getting random task: #{e.message}"
+          response.status = 500
+          { error: "Failed to get task: #{e.message}",
+            message_id: 'error',
+            receipt_handle: 'error',
+            task_name: TASK_TYPES[Random.rand(0..1)] }.to_json
+        end
       end
 
       r.get 'task' do
