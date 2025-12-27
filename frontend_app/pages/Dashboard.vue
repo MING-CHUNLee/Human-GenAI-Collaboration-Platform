@@ -205,6 +205,13 @@ import AnswerNote from '../components/dashboard/AnswerNote.vue';
 import ChatArea from '../components/dashboard/ChatArea.vue';
 import MobileChatDrawer from '../components/dashboard/MobileChatDrawer.vue';
 
+// Import composables (for gradual integration)
+import { useBehaviorTracking } from '../composables/useBehaviorTracking';
+import { useTaskTimer } from '../composables/useTaskTimer';
+import { useChatMessages } from '../composables/useChatMessages';
+import { useTaskManagement } from '../composables/useTaskManagement';
+import { useLocalStorage } from '../composables/useLocalStorage';
+
 export default {
   components: {
     BrandHeader,
