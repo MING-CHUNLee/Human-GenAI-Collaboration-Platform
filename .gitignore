@@ -10,3 +10,13 @@ Gemfile.lock
 /config/application.yml
 homework_sample
 output
+
+# Frontend build and development files
+dist/
+dist/*.hot-update.js
+dist/*.hot-update.json
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

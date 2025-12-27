@@ -3,243 +3,64 @@
     <el-container style="height: 100vh;">
       <el-container class="dashboard" style="height:100%">
         <el-main>
-          <el-row :gutter="20" class="brand-area">
-            <img src="../static/logo.png" alt="PopAi" style="width: 40px; height: 40px; margin-right: 10px;" /> 
-            <div class="brand-class">
-              Co-here | Your Travel Ideas Workspace
-            </div> 
-            <el-button style="margin-left:8px;" round ref="infoRef" size="small" type="info" icon="InfoFilled" @click="open = true">
-              Help
-            </el-button>   
-             </el-row>
+          <BrandHeader ref="infoRef" @open-help="open = true" />
           <el-row  :gutter="20">
             <el-col :xs="24" :sm="24" :md="14" :lg="13" :xl="13" class="task-area cloudy-glass">
-              <el-card ref="scenarioRef" class="scenario">
-                <div class="scenario-scroll">
-                  <div class="scenario-title">
-                    Your Task
-                  </div>
-                  <div  v-html="scenarioText">
-                  </div>
-                </div>
-              </el-card>
-              <el-card ref="noteRef" class="note">
-                <el-scrollbar always height="100%" >
-                  <div class="scenario-title">
-                  Your Answer
-                  <el-text size="small" tag="i"> Enter the your ideas for Part 1 and Part 2 below </el-text>
-                </div>
-                <el-input
-                  ref="textareaRef"
-                  name="NoteArea"
-                  v-model="textArea"
-                  type="textarea"
-                  placeholder="Please AVOID leaving this window for the duration of this task – using external tools might reduce your final reward."
-                  :autosize="{ minRows: textAreaRowRef , maxRows: textAreaRowRef}"
-                  @input="handleInput($event, textArea)"
-
-                  @keydown.ctrl.a="handleHighlight"
-                  @keydown.meta.a="handleHighlight"
-                 
-                  @copy="handleCopy"
-                  @cut="handleCopy"
-                  @paste="handlePaste"
-                  @mouseup="handleMouseUp"
-                  @focusin="startFocusTime"
-                  @focusout="endFocusTime"
-                />
-                <div class="note_panel">
-                  <div class="text-area_info">
-                    <div><el-icon size="small"><Finished /></el-icon> Word count: {{ textAreaWordCount }} ( {{minWords}}-{{maxWords}} max ) </div>
-                    <div> <el-icon size="small"><Timer /></el-icon>Try to finish in:&nbsp; <span v-html="timeSeconds"></span> </div>
-                    <div class="notice">
-                      <el-text size="small">* Please <b>AVOID</b> leaving this window for the duration of this task – using external tools might reduce your final reward.</el-text>
-                    </div>
-                  </div>
-                  <el-form ref="submitTaskRef"  label-width="auto" class="submit_block">
-                    <el-form-item label="I have finished">
-                      <!-- active-icon="Check" inactive-icon="Close" -->
-                        <el-switch v-model="hasFinishTask" :before-change="checkTaskFinish"  />
-                      </el-form-item>
-                      <el-form-item>
-                        <el-button  type="info" :disabled="!hasFinishTask" round @click="onSubmitTask">Submit</el-button>
-                      </el-form-item>
-                  </el-form>
-
-                  
-                </div>
-
-                <!-- <p>{{highlightedText}}</p> -->
-
-                </el-scrollbar>
-                
-
-            </el-card>
+              <TaskScenario ref="scenarioRef" :scenario-text="scenarioText" />
+              <AnswerNote
+                ref="noteRef"
+                v-model="textArea"
+                :word-count="textAreaWordCount"
+                :min-words="minWords"
+                :max-words="maxWords"
+                :time-seconds="timeSeconds"
+                :text-area-rows="textAreaRowRef"
+                @input="handleInput"
+                @highlight="handleHighlight"
+                @copy="handleCopy"
+                @paste="handlePaste"
+                @mouse-up="handleMouseUp"
+                @focus-in="startFocusTime"
+                @focus-out="endFocusTime"
+                @submit-task="onSubmitTask"
+                @check-finish="checkTaskFinish"
+              />
             </el-col>
-            <el-col v-if="!mobileDrawer" ref="chatBotRef"  :xs="24" :sm="24" :md="10" :lg="11" :xl="11" class="chat-area cloudy-glass invisible">
-              <!-- Chat messages will go here -->
-              <div style="padding:5px 4px">
-                  <el-popover
-                    placement="top-start"
-                    title="AI Assistant"
-                    :width="400"
-                    trigger="hover"
-                    content="AI Assistant is a chatbot powered by GPT-4o. It can help you with various tasks. especially for text-related tasks."
-                  >
-                    <template #reference>
-                       <el-text  size="large" tag="b" class="chat-title"> AI Assistant
-                  <el-tag size="small" type='info' effect="dark"
-                  round>Powered by ChatGPT</el-tag>   </el-text>  
-                    </template>
-                  </el-popover>
-              </div>
-              <el-scrollbar max-height="100%" height="100%" ref="scrollContainer">
-                <div v-for="message in messages" :key="message.id" class="message">
-                  <el-card>
-                    <div class="dialogue"  v-if="message.sender === 'user'" :id="'user_question_block_' + message.id" @mouseup="handleMouseUp" @copy="handleCopy">
-                      <el-avatar :size="28" class="avatar user-bg" icon="UserFilled" />
-                      <div>
-                         <div class="user-title "  :id="'user_question_tag_' + message.id">
-                          You
-                        </div>
-                        <div :id="'user_question_' + message.id" v-html="message.text"></div>
-                      </div>
-
-                    </div>
-                    <div  class="dialogue" v-else :id="'ai_feedback_block_' + message.id"   @mouseup="handleMouseUp" @copy="handleCopy">
-                      <el-avatar :size="28" class="avatar bot-bg"   icon="ChatLineRound" />
-                      <div>
-                        <div class="user-title"  :id="'ai_feedback_tag_' + message.id" >
-                          Chatbot
-                        </div>
-                        <div  :id="'ai_feedback_' + message.id" style="word-wrap: break-word; white-space: pre-wrap; line-height:1.1" v-html="message.text"></div>
-                        <!-- <el-tooltip :id="'icon_' + message.id" placement="bottom">
-                          <template  #content> Copy </template>
-                          <el-button :id="'button_' + message.id" size="small" type="info" plain  @click="handleCopiedButton" round >
-                          <el-icon :id="'button_' + message.id" ><CopyDocument :id="'button_' + message.id" /> </el-icon>
-                        </el-button>
-                        </el-tooltip> -->
-                        <!-- <span v-if="isLastChatbotMessage(message)">
-                          <el-button :disabled="MIN_TEMP>=currentTemp" @click="resentMessage(false)" size="small" type="info" plain round>
-                           Give me more various idea!
-                          </el-button>
-                          <el-button :disabled="MAX_TEMP<=currentTemp" @click="resentMessage(true)" size="small" type="info" plain round>
-                            Give me more cautious idea!
-                          </el-button>
-
-                        </span>                      -->
-                      </div>
-                    </div>
-                  </el-card>
-                </div>
-              </el-scrollbar>
-              <el-card ref="chatInputRef" class="bar">
-                <el-input
-                  type="textarea"
-                  :autosize="{ minRows: 1 , maxRows: 6}"
-                  id="PromptArea"
-                  class="prompt_input"
-                  name="PromptArea"
-                  v-model="userInput"
-                  placeholder="Type your message here..."
-                  resize="none"
-                  @input="handlePromptInput($event, userInput)"
-                  @keydown.ctrl.a="handleHighlight"
-                  @keydown.meta.a="handleHighlight"
-                  @copy="handleCopy"
-                  @cut="handleCopy"
-                  @paste="handlePaste"
-                  @mouseup="handleMouseUp"
-                  @focusin="startFocusTime"
-                  @focusout="endFocusTime"
-
-                >
-                </el-input>
-                <el-button class="submit-chatbot" :disabled="messageSending" :loading="messageSending" @click="sendMessage">      
-                      <Promotion v-show="!messageSending"  style="width:24px; vertical-align:middle;  padding:0;" />
-                </el-button>
-              </el-card>
+            <el-col v-if="!mobileDrawer" :xs="24" :sm="24" :md="10" :lg="11" :xl="11">
+              <ChatArea
+                ref="chatBotRef"
+                v-model="userInput"
+                :messages="messages"
+                :message-sending="messageSending"
+                @prompt-input="handlePromptInput"
+                @highlight="handleHighlight"
+                @copy="handleCopy"
+                @paste="handlePaste"
+                @mouse-up="handleMouseUp"
+                @focus-in="startFocusTime"
+                @focus-out="endFocusTime"
+                @send-message="sendMessage"
+              />
             </el-col>
           </el-row>
         </el-main>
-        <!-- Drawer Code For  Mobile -->
-        <el-button v-if="mobileDrawer" ref="chatBotRef" class="mobile-drawer"  style="margin-left: 16px" @click="drawer = true">
-            <img src="../static/logo.png" alt="PopAi" style="width: 36px; height: 36px;" /> 
-        </el-button>
-
-        <!-- @closed="scrollToBottom()"  -->
-        <el-drawer class="inner-drawer" @open="scrollToBottom();" v-model="drawer" size="80%" title="AI Assistant" >
-           <div class="m-chat-area">
-              <el-scrollbar class="scroll-bar" ref="scrollContainer">
-                <div v-for="message in messages" :key="message.id" class="message">
-                  <el-card>
-                    <div class="dialogue"  v-if="message.sender === 'user'" :id="'user_question_block_' + message.id" @mouseup="handleMouseUp" @copy="handleCopy">
-                      <el-avatar :size="28" class="avatar user-bg" icon="UserFilled" />
-                      <div>
-                         <div class="user-title"  :id="'user_question_tag_' + message.id">
-                          You
-                        </div>
-                        <!-- <el-tag size="small" :id="'user_question_tag_' + message.id">You</el-tag> -->
-                        <!-- style="white-space: pre-line"  -->
-                        <div :id="'user_question_' + message.id" v-html="message.text"></div>
-                      </div>
-
-                    </div>
-                    <div  class="dialogue" v-else :id="'ai_feedback_block_' + message.id"   @mouseup="handleMouseUp" @copy="handleCopy">
-                      <el-avatar :size="28" class="avatar bot-bg"   icon="ChatLineRound" />
-                      <div>
-                        <div class="user-title"  :id="'ai_feedback_tag_' + message.id" >
-                          Chatbot
-                        </div>
-                        <!-- <el-tag  :id="'ai_feedback_tag_' + message.id" size="small" type="success">Chatbot</el-tag> -->
-                        <!-- style="white-space: pre-line"  -->
-                        <div  :id="'ai_feedback_' + message.id" style="word-wrap: break-word; white-space: pre-wrap; line-height:1.1" v-html="message.text"></div>
-                        <!-- <el-tooltip :id="'icon_' + message.id" placement="bottom">
-                          <template  #content> Copy </template>
-                          <el-button :id="'button_' + message.id" size="small" type="info" plain  @click="handleCopiedButton" round >
-                          <el-icon :id="'button_' + message.id" ><CopyDocument :id="'button_' + message.id" /> </el-icon>
-                        </el-button>
-                        </el-tooltip> -->
-                        <!-- <span v-if="isLastChatbotMessage(message)">
-                          <el-button :disabled="MIN_TEMP>=currentTemp" @click="resentMessage(false)" size="small" type="info" plain round>
-                           Give me more various idea!
-                          </el-button>
-                          <el-button :disabled="MAX_TEMP<=currentTemp" @click="resentMessage(true)" size="small" type="info" plain round>
-                            Give me more cautious idea!
-                          </el-button>
-
-                        </span>                      -->
-                      </div>
-                    </div>
-                  </el-card>
-                </div>
-              </el-scrollbar>
-              <el-card ref="chatInputRef" class="bar">
-                <el-input
-                  type="textarea"
-                  :autosize="{ minRows: 1 , maxRows: 6}"
-                  id="prompt_input"
-                  class="PromptArea"
-                  name="PromptArea"
-                  v-model="userInput"
-                  placeholder="Type your message here..."
-                  @input="handlePromptInput($event, userInput)"
-                  @keydown.ctrl.a="handleHighlight"
-                  @keydown.meta.a="handleHighlight"
-                  @copy="handleCopy"
-                  @cut="handleCopy"
-                  @paste="handlePaste"
-                  @mouseup="handleMouseUp"
-                  @focusin="startFocusTime"
-                  @focusout="endFocusTime"
-                >
-                </el-input>
-                <el-button class="submit-chatbot" :disabled="messageSending" :loading="messageSending" @click="sendMessage">      
-                      <Promotion v-show="!messageSending"  style="width:24px; vertical-align:middle;  padding:0;" />
-                </el-button>
-              </el-card>
-            </div>
-        </el-drawer>
+        <!-- Mobile Chat Drawer -->
+        <MobileChatDrawer
+          v-if="mobileDrawer"
+          v-model="userInput"
+          v-model:drawer="drawer"
+          :messages="messages"
+          :message-sending="messageSending"
+          @prompt-input="handlePromptInput"
+          @highlight="handleHighlight"
+          @copy="handleCopy"
+          @paste="handlePaste"
+          @mouse-up="handleMouseUp"
+          @focus-in="startFocusTime"
+          @focus-out="endFocusTime"
+          @send-message="sendMessage"
+          @scroll-bottom="scrollToBottom"
+        />
 
         <!-- Tour Code -->
         <el-tour :close-on-press-escape="attendTour" :show-close="attendTour" @finish="tourFinished" :mask="{ color: 'rgba(0, 0, 0, 0.82)' }" v-model="open" type="default" class="web-tour" :content-style="{ borderRadius:'12px' ,boxShadowing:'rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px'}" >
@@ -377,9 +198,21 @@ import { watchEffect } from 'vue';
 import { ElMessage,ElNotification  } from 'element-plus'
 import { useStore } from 'vuex'
 
-
+// Import dashboard components
+import BrandHeader from '../components/dashboard/BrandHeader.vue';
+import TaskScenario from '../components/dashboard/TaskScenario.vue';
+import AnswerNote from '../components/dashboard/AnswerNote.vue';
+import ChatArea from '../components/dashboard/ChatArea.vue';
+import MobileChatDrawer from '../components/dashboard/MobileChatDrawer.vue';
 
 export default {
+  components: {
+    BrandHeader,
+    TaskScenario,
+    AnswerNote,
+    ChatArea,
+    MobileChatDrawer
+  },
   setup() {
 
     const drawer = ref(false)
@@ -1194,7 +1027,7 @@ export default {
 
       let selectedText = '';
       // Check if the event's target is the textarea
-      if (e.target === textareaRef.value.$refs.textarea) {
+      if (noteRef.value && noteRef.value.textareaRef && e.target === noteRef.value.textareaRef.$refs.textarea) {
         const start = e.target.selectionStart;
         const end = e.target.selectionEnd;
         selectedText = e.target.value.substring(start, end);
